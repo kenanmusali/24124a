@@ -130,6 +130,11 @@
   .r-ans.yours-line{color:var(--muted)}
   .r-ans .opt-svg svg{max-height:42px}
 
+
+  .timer-pill{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; background:#EFEBE2; padding:4px 10px; border-radius:999px}
+  .timer-pill svg{color:var(--brass)}
+  .result-time{margin-top:14px; font-size:13.5px; color:var(--muted)}
+  .result-time b{font-family:'Spectral',serif; font-size:18px; color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
   footer{text-align:center; color:var(--muted); font-size:12.5px; margin-top:40px}
   @media (max-width:560px){.wrap{padding:24px 16px 70px} h1{font-size:27px} .q-text{font-size:19px} .stat-row{gap:18px}}
   @media (prefers-reduced-motion:reduce){*{transition:none !important}}
@@ -186,7 +191,7 @@
     <div class="topbar">
       <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
       <div class="meta-row">
-        <span class="counter"><b id="curNum">1</b> / <span id="totNum">50</span></span>
+        <span class="timer-pill" id="timerPill"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg><span id="timerText">00:00</span></span><span class="counter"><b id="curNum">1</b> / <span id="totNum">50</span></span>
         <span class="answered-pill"><span id="ansCount">0</span> cavablanıb</span>
       </div>
     </div>
@@ -215,6 +220,7 @@
     <div class="card score-card">
       <div class="score-ring" id="scorePct">0%</div>
       <div class="score-frac"><b id="scoreCorrect">0</b> / <span id="scoreTotal">0</span> düzgün</div>
+      <div class="result-time">Vaxt: <b id="resultTime">00:00</b></div>
       <div class="score-bar"><span id="scoreBarFill" style="width:0"></span></div>
       <div class="stat-row">
         <div class="stat ok"><b id="statRight">0</b>Düzgün</div>
@@ -241,6 +247,11 @@
 <script>
 (function(){
   "use strict";
+  let _timerStart=0, _timerInt=null, _elapsedMs=0;
+  function fmtTime(ms){var s=Math.floor(ms/1000);var h=Math.floor(s/3600);var m=Math.floor((s%3600)/60);var ss=s%60;var pad=function(x){return (x<10?'0':'')+x;};return (h>0?(pad(h)+':'):'')+pad(m)+':'+pad(ss);}
+  function startTimer(){_timerStart=Date.now();var el=document.getElementById('timerText');if(el)el.textContent='00:00';if(_timerInt)clearInterval(_timerInt);_timerInt=setInterval(function(){var t=document.getElementById('timerText');if(t)t.textContent=fmtTime(Date.now()-_timerStart);},1000);}
+  function stopTimer(){if(_timerInt){clearInterval(_timerInt);_timerInt=null;}_elapsedMs=Date.now()-_timerStart;return _elapsedMs;}
+
   const DB = JSON.parse(document.getElementById('qdata').textContent);
   const ALL = DB.questions;
   const IMAGES = DB.images;
@@ -281,8 +292,7 @@
     if(!list.length){$('setupErr').textContent='Bu aralıqda sual yoxdur.'; return;}
     buildPool(list);
     $('setup').classList.add('hidden'); $('results').classList.add('hidden'); $('quiz').classList.remove('hidden');
-    $('totNum').textContent=pool.length; buildPalette(); render(); window.scrollTo(0,0);
-  }
+    $('totNum').textContent=pool.length; buildPalette(); render(); startTimer(); window.scrollTo(0,0); }
   $('startBtn').addEventListener('click',()=>{
     const n=syncCount();
     if(!n){$('setupErr').textContent='Bu aralıqda sual yoxdur.'; return;}
@@ -341,7 +351,7 @@
 
   function ansHtml(o){ return o.svg ? '<span class="opt-svg">'+o.svg+'</span>' : '<span></span>'; }
   let lastWrong=[];
-  function showResults(){
+  function showResults(){ var _ms=stopTimer(); var _rt=document.getElementById('resultTime'); if(_rt)_rt.textContent=fmtTime(_ms);
     let right=0,wrong=0,skip=0; lastWrong=[];
     const rl=$('reviewList'); rl.innerHTML='';
     pool.forEach((q,i)=>{
@@ -371,7 +381,7 @@
   });
   $('restartBtn').addEventListener('click',()=>{$('results').classList.add('hidden'); $('setup').classList.remove('hidden'); window.scrollTo(0,0);});
   $('retryWrongBtn').addEventListener('click',()=>{if(lastWrong.length) startFrom(lastWrong.slice());});
-  $('exitBtn').addEventListener('click',()=>{
+  $('exitBtn').addEventListener('click',()=>{ if(typeof stopTimer==='function')stopTimer();
     if(answers.some(a=>a!==null)&&!confirm('İmtahandan çıxsan, cavabların itəcək. Davam edilsin?')) return;
     $('quiz').classList.add('hidden'); $('results').classList.add('hidden'); $('setup').classList.remove('hidden'); window.scrollTo(0,0);
   });
